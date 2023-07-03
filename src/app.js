@@ -25,8 +25,16 @@ try {
 
 const db = mongoClient.db();
 
+//data validation (user)
 const userSchema = Joi.object({
     name: Joi.string().required(),
+});
+
+//data validation (message content)
+const messageSchema = Joi.object({
+    to: Joi.string().min(1).required(),
+    text: Joi.string().min(1).required(),
+    type: Joi.any().valid('message', 'private_message').required(),
 });
 
 app.post('/participants', async (req, res) => {
@@ -41,36 +49,26 @@ app.post('/participants', async (req, res) => {
     }
 
     try {
-        const user = await db
-            .collection('participants')
-            .findOne({ name: name });
-        
+        const user = await db.collection('participants').findOne({ name: name });
+
         if (user) {
             return res.status(409).send('Username already in use');
         }
 
-        const insertUser = db
-            .collection('participants')
-            .insertOne({
-                name: name,
-                lastStatus: Date.now()
-            });
+        await db.collection('participants').insertOne({
+            name: name,
+            lastStatus: Date.now(),
+        });
 
-        const insertMessage = db
-            .collection('messages')
-            .insertOne({
-                from: name,
-                to: 'Todos',
-                text: 'entra na sala...',
-                type: 'status',
-                time: dayjs(date).format('HH:mm:ss')
-            });
+        await db.collection('messages').insertOne({
+            from: name,
+            to: 'Todos',
+            text: 'entra na sala...',
+            type: 'status',
+            time: dayjs(date).format('HH:mm:ss'),
+        });
 
-        await insertUser;
-        await insertMessage;
-
-        res.sendStatus(201);
-
+        return res.sendStatus(201);
     } catch (err) {
         res.status(500).send(err.message);
     }
@@ -78,16 +76,20 @@ app.post('/participants', async (req, res) => {
 
 app.get('/participants', async (req, res) => {
     try {
-        const participants = await db
-            .collection('participants')
-            .find()
-            .toArray()
+        const participants = await db.collection('participants').find().toArray();
 
         res.send(participants);
-
     } catch (err) {
         res.status(500).send(err.message);
     }
-})
+});
+
+app.post('/messages'),
+    async (req, res) => {
+        const { to, text, type } = req.body;
+        const from = req.headers.user;
+
+        const messageValidation = messageSchema.validate(req.body, { abortEarly: false });
+    };
 
 app.listen(PORT, () => console.log(`Server is online, utilizing PORT: ${PORT}`));
