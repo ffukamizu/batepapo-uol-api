@@ -10,10 +10,10 @@ dotenv.config();
 app.use(json());
 app.use(cors());
 
-//server port
+// server port
 const PORT = 5000;
 
-//database adress
+// database address
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
 
 try {
@@ -25,12 +25,12 @@ try {
 
 const db = mongoClient.db();
 
-//data validation (user)
+// data validation (user)
 const userSchema = Joi.object({
     name: Joi.string().required(),
 });
 
-//data validation (message content)
+// data validation (message content)
 const messageSchema = Joi.object({
     to: Joi.string().min(1).required(),
     text: Joi.string().min(1).required(),
@@ -65,7 +65,7 @@ app.post('/participants', async (req, res) => {
             to: 'Todos',
             text: 'entra na sala...',
             type: 'status',
-            time: dayjs(date).format('HH:mm:ss'),
+            time: dayjs(Date.now()).format('HH:mm:ss'),
         });
 
         return res.sendStatus(201);
@@ -84,12 +84,31 @@ app.get('/participants', async (req, res) => {
     }
 });
 
-app.post('/messages'),
-    async (req, res) => {
-        const { to, text, type } = req.body;
-        const from = req.headers.user;
+app.post('/messages', async (req, res) => {
+    const { to, text, type } = req.body;
+    const from = req.headers.user;
 
-        const messageValidation = messageSchema.validate(req.body, { abortEarly: false });
-    };
+    const messageValidation = messageSchema.validate(req.body, { abortEarly: false });
+
+    if (messageValidation.error) {
+        const error = messageValidation.error.details.map((detail) => detail.message);
+
+        return res.status(422).send(error);
+    }
+
+    try {
+        await db.collection('messages').insertOne({
+            from: from,
+            to: to,
+            text: text,
+            type: type,
+            time: dayjs(Date.now()).format('HH:mm:ss'),
+        });
+
+        return res.sendStatus(201);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
 
 app.listen(PORT, () => console.log(`Server is online, utilizing PORT: ${PORT}`));
