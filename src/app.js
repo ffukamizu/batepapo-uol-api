@@ -148,4 +148,30 @@ app.get('/messages', async (req, res) => {
     }
 });
 
+app.post('/status', async (req, res) => {
+    const name = req.headers.user;
+
+    if (name === undefined) {
+        return res.sendStatus(404);
+    }
+
+    try {
+        const user = await db
+            .collection('participants')
+            .findOne({ name: name });
+
+        if (!user) {
+            return res.sendStatus(404);
+        } else {
+            await db
+                .collection('participants')
+                .updateOne(user, { $set: { lastStatus: Date.now() } });
+
+            return res.sendStatus(200);
+        }
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 app.listen(PORT, () => console.log(`Server is online, utilizing PORT: ${PORT}`));
