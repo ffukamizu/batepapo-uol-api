@@ -37,6 +37,9 @@ const messageSchema = Joi.object({
     type: Joi.any().valid('message', 'private_message').required(),
 });
 
+//data validation (message query value)
+const limitSchema = Joi.number().greater(0);
+
 app.post('/participants', async (req, res) => {
     const { name } = req.body;
 
@@ -106,6 +109,40 @@ app.post('/messages', async (req, res) => {
         });
 
         return res.sendStatus(201);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.get('/messages', async (req, res) => {
+    const name = req.headers.user;
+    const { limit } = req.query;
+    const getMessageValidation = limitSchema.validate(limit);
+
+    if (getMessageValidation.error) {
+        const error = getMessageValidation.error.details.map((detail) => detail.message);
+
+        return res.status(422).send(error);
+    }
+
+    try {
+        if (limit !== undefined) {
+            const messages = await db
+                .collection('messages')
+                .find({ $or: [{ to: 'Todos' }, { from: name }, { to: name }] })
+                .sort({ $natural: -1 })
+                .limit(Number(limit))
+                .toArray();
+
+            return res.send(messages);
+        } else {
+            const messages = await db
+                .collection('messages')
+                .find({ $or: [{ to: 'Todos' }, { from: name }, { to: name }] })
+                .toArray();
+
+            return res.send(messages);
+        }
     } catch (err) {
         res.status(500).send(err.message);
     }
