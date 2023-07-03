@@ -100,6 +100,14 @@ app.post('/messages', async (req, res) => {
     }
 
     if (!from) {
+        return res.status(422).send('Invalid user');
+    }
+
+    const user = await db
+        .collection('participants')
+        .findOne({ name: from });
+
+    if (!user) {
         return res.status(422).send('User not found');
     }
 
