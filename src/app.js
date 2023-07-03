@@ -174,4 +174,28 @@ app.post('/status', async (req, res) => {
     }
 });
 
+setInterval(async () => {
+    try {
+        const users = await db.collection('participants').find().toArray();
+
+        for (const user of users) {
+            const timeDifference = Date.now() - user.lastStatus;
+
+            if (timeDifference > 10000) {
+                await db.collection('participants').deleteOne(user);
+
+                await db.collection('messages').insertOne({
+                    from: user.name,
+                    to: 'Todos',
+                    text: 'sai da sala...',
+                    type: 'status',
+                    time: dayjs(Date.now()).format('HH:mm:ss'),
+                });
+            }
+        }
+    } catch (err) {
+        console.log(err.message);
+    }
+}, 15000);
+
 app.listen(PORT, () => console.log(`Server is online, utilizing PORT: ${PORT}`));
