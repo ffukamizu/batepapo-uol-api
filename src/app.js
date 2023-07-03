@@ -99,6 +99,10 @@ app.post('/messages', async (req, res) => {
         return res.status(422).send(error);
     }
 
+    if (!from) {
+        return res.status(422).send('User not found');
+    }
+
     try {
         await db.collection('messages').insertOne({
             from: from,
